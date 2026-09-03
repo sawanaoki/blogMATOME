@@ -200,7 +200,7 @@ if st.session_state.current_step == 1:
                                 with st.spinner(f"「{word}」のポストを収集中..."):
                                     st.session_state.current_topic = word
                                     st.session_state.news_summary = f"Yahoo!リアルタイム急上昇トレンド: {word}"
-                                    posts = fetch_yahoo_topic_posts(word, max_count=15)
+                                    posts = fetch_yahoo_topic_posts(word, max_count=20)
                                     st.session_state.collected_posts = posts
                                     st.session_state.generated_article = None
                                     # スクロール不要！即座にステップ2（生成画面）へ自動遷移
@@ -216,7 +216,7 @@ if st.session_state.current_step == 1:
                     with st.spinner(f"「{chosen_word}」に関するXのポストを収集しています..."):
                         st.session_state.current_topic = chosen_word
                         st.session_state.news_summary = f"Yahoo!リアルタイム急上昇トレンド: {chosen_word}"
-                        posts = fetch_yahoo_topic_posts(chosen_word, max_count=15)
+                        posts = fetch_yahoo_topic_posts(chosen_word, max_count=20)
                         st.session_state.collected_posts = posts
                         st.session_state.generated_article = None
                         st.session_state.current_step = 2
@@ -232,10 +232,10 @@ if st.session_state.current_step == 1:
         with c_nref:
             if st.button("🔄 ニュース更新", key="btn_fetch_gnews"):
                 with st.spinner("ニュース更新中..."):
-                    st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=15)
+                    st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=20)
         
         if "gnews_articles" not in st.session_state:
-            st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=15)
+            st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=20)
             
         gnews = st.session_state.gnews_articles
         if gnews:
@@ -249,7 +249,7 @@ if st.session_state.current_step == 1:
                         with st.spinner(f"「{clean_title}」のネットの反応を検索中..."):
                             st.session_state.current_topic = clean_title
                             st.session_state.news_summary = f"ニュースタイトル: {n['title']}\n配信元: {n['source']}\nリンク: {n['link']}"
-                            posts = fetch_yahoo_topic_posts(clean_title[:30], max_count=15)
+                            posts = fetch_yahoo_topic_posts(clean_title[:30], max_count=20)
                             st.session_state.collected_posts = posts
                             st.session_state.generated_article = None
                             st.session_state.current_step = 2
@@ -268,7 +268,7 @@ if st.session_state.current_step == 1:
                     if news_results:
                         news_text = "\n".join([f"- {n['title']} ({n['source']})" for n in news_results])
                     st.session_state.news_summary = news_text or f"検索キーワード: {manual_kw}"
-                    posts = fetch_yahoo_topic_posts(manual_kw, max_count=15)
+                    posts = fetch_yahoo_topic_posts(manual_kw, max_count=20)
                     st.session_state.collected_posts = posts
                     st.session_state.generated_article = None
                     st.session_state.current_step = 2
