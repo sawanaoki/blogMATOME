@@ -9,9 +9,9 @@ DEFAULT_HEADERS = {
     "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
 }
 
-def fetch_yahoo_trends(max_count: int = 20) -> List[Dict[str, str]]:
+def fetch_yahoo_trends(max_count: int = 25) -> List[Dict[str, Any]]:
     """
-    Yahoo!リアルタイム検索から現在の急上昇トレンドキーワード一覧を取得します。
+    Yahoo!リアルタイム検索から現在の急上昇トレンドキーワード一覧（順位付き）を取得します。
     """
     url = "https://search.yahoo.co.jp/realtime"
     try:
@@ -22,28 +22,33 @@ def fetch_yahoo_trends(max_count: int = 20) -> List[Dict[str, str]]:
         return []
 
     soup = BeautifulSoup(response.text, "html.parser")
-    raw_trends: List[Dict[str, str]] = []
+    raw_trends: List[Dict[str, Any]] = []
     seen_words = set()
 
+    rank = 1
     for a in soup.find_all("a", href=re.compile(r"/realtime/search\?p=")):
         text = a.text.strip()
-        # 先頭の数字＋空白やランキング数字をクリーンアップ
+        # 先頭の数字やジャンル名をクリーンアップ
         cleaned = re.sub(r"^\d+\s*", "", text)
-        cleaned = re.sub(r"^(アニメ・ゲーム|スポーツ|エンタメ|ビジネス|IT・科学|国内|地域|国際)\s*", "", cleaned)
+        cleaned = re.sub(r"^(アニメ・ゲーム|スポーツ|エンタメ|ビジネス|IT・科学|国内|地域|国際|グルメ)\s*", "", cleaned)
+        cleaned = cleaned.strip()
         
         if (
             cleaned
             and len(cleaned) > 1
             and cleaned not in seen_words
-            and not any(ng in cleaned for ng in ["もっと見る", "ヘルプ", "利用規約", "検索"])
+            and not any(ng in cleaned for ng in ["もっと見る", "ヘルプ", "利用規約", "検索", "プライバシー", "ご意見"])
         ):
             seen_words.add(cleaned)
             href = a.get("href", "")
             full_url = "https://search.yahoo.co.jp" + href if href.startswith("/") else href
+            
             raw_trends.append({
+                "rank": rank,
                 "word": cleaned,
                 "url": full_url
             })
+            rank += 1
             if len(raw_trends) >= max_count:
                 break
 

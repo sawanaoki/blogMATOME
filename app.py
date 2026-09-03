@@ -88,80 +88,148 @@ with st.sidebar.expander("🐦 X (Twitter) 公式 API 設定（将来用）", ex
 st.sidebar.markdown("---")
 st.sidebar.caption("🚀 まとめブログ自動作成ツール v1.0")
 
+# モバイル最適化CSS
+st.markdown("""
+<style>
+    /* モバイル向け押しやすいボタンとカードレイアウト */
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+    }
+    .buzz-item {
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    @media (max-width: 768px) {
+        .block-container {
+            padding-left: 0.8rem;
+            padding-right: 0.8rem;
+            padding-top: 1rem;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ==========================================
 # メイン画面
 # ==========================================
-st.title("⚡ バズ話題・ニュースまとめブログ自動作成ツール")
-st.markdown("Xでバズった話題や最新ニュースを自動収集し、Geminiでライブドアブログ向けのまとめ記事を一括生成します。")
+st.title("⚡ バズ話題・ニュースまとめブログ自動作成")
+st.caption("今バズっているXの話題や最新ニュースを選んで、Geminiでライブドア向けまとめ記事を瞬時に作成します。")
 
 # ----------------------------------------------------
 # STEP 1: 話題・ニュースを選ぶ
 # ----------------------------------------------------
-st.subheader("1. 話題・ニュースを選択する")
+st.subheader("1. バズ話題・ニュース一覧から選ぶ")
 
 tab_yahoo, tab_gnews, tab_manual = st.tabs([
-    "🔥 Yahoo!リアルタイム急上昇トレンド",
-    "📰 Googleニュース（最新・ジャンル別）",
+    "🔥 Yahoo!リアルタイム バズ一覧",
+    "📰 Googleニュース一覧",
     "🔍 自由キーワード検索"
 ])
 
 # --- タブ1: Yahoo!リアルタイム急上昇トレンド ---
 with tab_yahoo:
-    col_btn, col_info = st.columns([1, 4])
-    with col_btn:
+    c_ref, c_view = st.columns([1, 2])
+    with c_ref:
         if st.button("🔄 トレンド再取得", key="btn_refresh_trends"):
-            st.session_state.yahoo_trends = fetch_yahoo_trends(25)
+            with st.spinner("最新トレンドを取得中..."):
+                st.session_state.yahoo_trends = fetch_yahoo_trends(25)
     
     if "yahoo_trends" not in st.session_state:
         st.session_state.yahoo_trends = fetch_yahoo_trends(25)
 
     trends = st.session_state.yahoo_trends
     if trends:
-        trend_words = [t["word"] for t in trends]
-        selected_trend = st.selectbox("現在急上昇中のトレンドワード:", trend_words, key="sb_trend")
-        if st.button("👉 このトレンドで情報を収集する", key="btn_collect_trend", type="primary"):
-            with st.spinner(f"「{selected_trend}」に関するXのポストを収集しています..."):
-                st.session_state.current_topic = selected_trend
-                st.session_state.news_summary = f"Yahoo!リアルタイム検索急上昇トレンドワード: {selected_trend}"
-                posts = fetch_yahoo_topic_posts(selected_trend, max_count=15)
-                st.session_state.collected_posts = posts
-                st.session_state.generated_article = None
-                st.success(f"「{selected_trend}」に関するポストを {len(posts)} 件取得しました！")
+        with c_view:
+            view_mode = st.radio("表示スタイル:", ["📱 カード一覧（スマホ推奨）", "📋 プルダウン選択"], horizontal=True)
+
+        if view_mode == "📱 カード一覧（スマホ推奨）":
+            st.write("▼ 今まさにバズっている話題一覧（タップで即選択）")
+            for idx, t in enumerate(trends):
+                rank = t.get("rank", idx + 1)
+                word = t.get("word", "")
+                
+                # 順位に応じたアイコン装飾
+                if rank == 1:
+                    badge = f"🥇 **1位**"
+                elif rank == 2:
+                    badge = f"🥈 **2位**"
+                elif rank == 3:
+                    badge = f"🥉 **3位**"
+                else:
+                    badge = f"**{rank}位**"
+
+                with st.container():
+                    c_text, c_act = st.columns([3, 2])
+                    with c_text:
+                        st.markdown(f"#### {badge} {word}")
+                        if t.get("url"):
+                            st.caption(f"[🔍 Yahoo!リアルタイムで見る]({t['url']})")
+                    with c_act:
+                        if st.button(f"👉 まとめ作成", key=f"btn_pick_trend_{idx}", type="primary"):
+                            with st.spinner(f"「{word}」のポストを収集中..."):
+                                st.session_state.current_topic = word
+                                st.session_state.news_summary = f"Yahoo!リアルタイム急上昇トレンド: {word}"
+                                posts = fetch_yahoo_topic_posts(word, max_count=15)
+                                st.session_state.collected_posts = posts
+                                st.session_state.generated_article = None
+                                st.success(f"「{word}」のポストを {len(posts)} 件取得しました！下のステップ2へ進んでください。")
+                                st.rerun()
+                    st.divider()
+
+        else:
+            # 従来のプルダウン方式
+            trend_words = [f"{t.get('rank', i+1)}位: {t['word']}" for i, t in enumerate(trends)]
+            selected_trend_idx = st.selectbox("トレンドを選択:", range(len(trend_words)), format_func=lambda i: trend_words[i])
+            chosen_word = trends[selected_trend_idx]["word"]
+            if st.button("👉 このトレンドで情報を収集する", key="btn_collect_trend", type="primary"):
+                with st.spinner(f"「{chosen_word}」に関するXのポストを収集しています..."):
+                    st.session_state.current_topic = chosen_word
+                    st.session_state.news_summary = f"Yahoo!リアルタイム急上昇トレンド: {chosen_word}"
+                    posts = fetch_yahoo_topic_posts(chosen_word, max_count=15)
+                    st.session_state.collected_posts = posts
+                    st.session_state.generated_article = None
+                    st.success(f"「{chosen_word}」に関するポストを {len(posts)} 件取得しました！")
     else:
         st.info("トレンド情報を取得できませんでした。しばらく経ってから再試行するか、自由検索をご利用ください。")
 
 # --- タブ2: Googleニュース ---
 with tab_gnews:
-    cat_col, _ = st.columns([2, 3])
-    with cat_col:
+    c_cat, c_nref = st.columns([2, 1])
+    with c_cat:
         selected_cat = st.selectbox("カテゴリ選択:", list(GOOGLE_NEWS_CATEGORIES.keys()))
-    
-    if st.button("📰 ニュース取得", key="btn_fetch_gnews"):
-        st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=15)
+    with c_nref:
+        if st.button("🔄 ニュース再取得", key="btn_fetch_gnews"):
+            with st.spinner("ニュース更新中..."):
+                st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=15)
     
     if "gnews_articles" not in st.session_state:
-        st.session_state.gnews_articles = fetch_google_news("トップニュース", max_count=15)
+        st.session_state.gnews_articles = fetch_google_news(selected_cat, max_count=15)
         
     gnews = st.session_state.gnews_articles
     if gnews:
-        news_options = [f"【{n['source']}】 {n['title']}" for n in gnews]
-        selected_news_idx = st.selectbox(
-            "ニュースを選択:",
-            range(len(news_options)),
-            format_func=lambda i: news_options[i]
-        )
-        selected_article = gnews[selected_news_idx]
-
-        if st.button("👉 このニュースで情報を収集する", key="btn_collect_news", type="primary"):
-            clean_title = selected_article['title'].split(" - ")[0]
-            with st.spinner(f"「{clean_title}」に関するネットの反応・ポストを検索中..."):
-                st.session_state.current_topic = clean_title
-                st.session_state.news_summary = f"ニュースタイトル: {selected_article['title']}\n配信元: {selected_article['source']}\n概要: {selected_article['summary']}\nリンク: {selected_article['link']}"
-                # ニュースタイトル主要語でXの反応を検索
-                posts = fetch_yahoo_topic_posts(clean_title[:30], max_count=15)
-                st.session_state.collected_posts = posts
-                st.session_state.generated_article = None
-                st.success(f"ニュースと関連ポスト {len(posts)} 件を取得しました！")
+        st.write(f"▼ 【{selected_cat}】最新ヘッドライン一覧（タップで即選択）")
+        for i, n in enumerate(gnews):
+            clean_title = n['title'].split(" - ")[0]
+            with st.container():
+                st.markdown(f"**【{n['source'] or 'ニュース'}】 {clean_title}**")
+                st.caption(f"公開日時: {n['published']}")
+                if st.button("👉 このニュースでまとめ作成", key=f"btn_pick_news_{i}", type="primary"):
+                    with st.spinner(f"「{clean_title}」のネットの反応を検索中..."):
+                        st.session_state.current_topic = clean_title
+                        st.session_state.news_summary = f"ニュースタイトル: {n['title']}\n配信元: {n['source']}\nリンク: {n['link']}"
+                        posts = fetch_yahoo_topic_posts(clean_title[:30], max_count=15)
+                        st.session_state.collected_posts = posts
+                        st.session_state.generated_article = None
+                        st.success(f"「{clean_title}」と関連ポスト {len(posts)} 件を取得しました！")
+                        st.rerun()
+                st.divider()
 
 # --- タブ3: 自由キーワード検索 ---
 with tab_manual:
