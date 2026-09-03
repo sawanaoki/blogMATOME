@@ -451,8 +451,9 @@ elif st.session_state.current_step == 3:
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #2b2b2b;">
                     {full_html}
                 </div>
+                <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
                 """,
-                height=550,
+                height=650,
                 scrolling=True
             )
 

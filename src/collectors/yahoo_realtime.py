@@ -89,9 +89,16 @@ def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15, sort_by_likes: bo
         author_elem = tc.find(class_=re.compile(r"Tweet_author|Tweet_info"))
         author = author_elem.get_text(separator=" ", strip=True) if author_elem else "匿名"
 
-        # リンク
-        link_elem = tc.find("a", href=re.compile(r"twitter\.com|x\.com"))
-        link = link_elem.get("href", "") if link_elem else ""
+        # リンク（パーマリンク: /status/ を優先取得）
+        link = ""
+        for a_href in tc.find_all("a"):
+            h = a_href.get("href", "")
+            if "/status/" in h:
+                link = h.split("?")[0]
+                break
+        if not link:
+            link_elem = tc.find("a", href=re.compile(r"twitter\.com|x\.com"))
+            link = link_elem.get("href", "").split("?")[0] if link_elem else ""
 
         # いいね数 (likes) & リツイート数 (rts) を data-cl-params から抽出
         likes = 0
