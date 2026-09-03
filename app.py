@@ -320,7 +320,7 @@ elif st.session_state.current_step == 2:
                         st.session_state[f"post_chk_{i}"] = True
                     st.rerun()
 
-            st.caption("※不要なポストのチェックを外すか、「すべて外す」を押してから使いたいポストだけチェックを入れてください。")
+            first_auth = st.session_state.collected_posts[0].get("author", "") if st.session_state.collected_posts else ""
             for idx, p in enumerate(st.session_state.collected_posts):
                 c_chk, c_txt = st.columns([1, 10])
                 chk_key = f"post_chk_{idx}"
@@ -333,8 +333,16 @@ elif st.session_state.current_step == 2:
                 with c_txt:
                     likes = p.get("likes", 0)
                     rts = p.get("rts", 0)
-                    metrics_badge = f"　<span style='background:#ffe3e3;color:#c92a2a;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:bold;'>❤️ {likes:,} いいね</span> <span style='background:#e7f5ff;color:#1864ab;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:bold;'>🔁 {rts:,} RT</span>" if (likes or rts) else ""
-                    st.markdown(f"**{p['author']}**{metrics_badge}", unsafe_allow_html=True)
+                    metrics_badge = f" <span style='background:#ffe3e3;color:#c92a2a;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:bold;'>❤️ {likes:,} いいね</span> <span style='background:#e7f5ff;color:#1864ab;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:bold;'>🔁 {rts:,} RT</span>" if (likes or rts) else ""
+                    
+                    if idx == 0:
+                        role_badge = "<span style='background:#ffd43b;color:#212529;padding:2px 8px;border-radius:12px;font-size:0.8em;font-weight:bold;'>👑 発端の元ポスト</span>"
+                    elif first_auth and p.get("author") == first_auth:
+                        role_badge = "<span style='background:#d3f9d8;color:#2b8a3e;padding:2px 8px;border-radius:12px;font-size:0.8em;font-weight:bold;'>🧵 本人の続き（結末・オチ）</span>"
+                    else:
+                        role_badge = "<span style='background:#f1f3f5;color:#495057;padding:2px 8px;border-radius:12px;font-size:0.8em;font-weight:bold;'>💬 返信・読者の声</span>"
+
+                    st.markdown(f"{role_badge} **{p['author']}**{metrics_badge}", unsafe_allow_html=True)
                     st.markdown(f"<div style='background:#f8f9fa;padding:8px 12px;border-radius:6px;margin:4px 0 10px;font-size:0.95em;'>{p['text']}</div>", unsafe_allow_html=True)
                 if use_post:
                     active_posts.append(p)

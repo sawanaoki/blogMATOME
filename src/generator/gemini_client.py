@@ -54,6 +54,7 @@ class GeminiGenerator:
 
         posts = posts or []
         posts_text_list = []
+        first_author = posts[0].get("author", "") if posts else ""
         for idx, p in enumerate(posts, 1):
             author = p.get("author", "匿名")
             text = p.get("text", "")
@@ -62,7 +63,16 @@ class GeminiGenerator:
             link = p.get("link", "")
             metric_str = f" [❤️ {likes:,}いいね / 🔁 {rts:,}RT]" if (likes or rts) else ""
             url_str = f" (URL: {link})" if link else ""
-            posts_text_list.append(f"[{idx}] {author}{metric_str}{url_str}: {text}")
+
+            # 投稿者本人の続き（ツリー）か読者からの返信コメントかを分類
+            if idx == 1:
+                role_label = "【発端の親ポスト】"
+            elif first_author and author == first_author:
+                role_label = "【★投稿者本人の続き（ツリー・結末）】"
+            else:
+                role_label = "【読者からの返信コメント・リプライ】"
+
+            posts_text_list.append(f"[{idx}] {role_label} {author}{metric_str}{url_str}: {text}")
         posts_text = "\n".join(posts_text_list) if posts_text_list else "特になし（トピック情報をもとに構成してください）"
 
         user_content = SUMMARY_BLOG_USER_PROMPT_TEMPLATE.format(

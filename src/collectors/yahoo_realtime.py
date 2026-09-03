@@ -54,10 +54,72 @@ def fetch_yahoo_trends(max_count: int = 25) -> List[Dict[str, Any]]:
 
     return raw_trends
 
-def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15, sort_by_likes: bool = True) -> List[Dict[str, Any]]:
+def fetch_yahoo_tweet_detail(tweet_id: str) -> List[Dict[str, Any]]:
+    """
+    Yahoo!リアルタイム検索の個別ポスト詳細ページから、
+    親ポスト、本人の続き（ツリー投稿）、および返信コメント（みんなのコメント）を取得します。
+    """
+    url = f"https://search.yahoo.co.jp/realtime/search/tweet/{tweet_id}"
+    try:
+        response = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Error fetching tweet detail {tweet_id}: {e}")
+        return []
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    containers = soup.find_all("div", class_=re.compile(r"Tweet_TweetContainer__"))
+    thread_posts: List[Dict[str, Any]] = []
+
+    for c in containers:
+        p = c.find("p")
+        if not p:
+            body_elem = c.find(class_=re.compile(r"Tweet_bodyWrap|Tweet_bodyContainer"))
+            text = body_elem.get_text(separator=" ", strip=True) if body_elem else ""
+        else:
+            text = p.get_text(separator=" ", strip=True)
+
+        if not text or len(text) < 3:
+            continue
+
+        author_elem = c.find(class_=re.compile(r"Tweet_author|Tweet_info"))
+        author = author_elem.get_text(separator=" ", strip=True) if author_elem else "匿名"
+
+        link = ""
+        for a_href in c.find_all("a"):
+            h = a_href.get("href", "")
+            if "/status/" in h:
+                link = h.split("?")[0]
+                break
+
+        likes = 0
+        rts = 0
+        a_param = c.find("a", attrs={"data-cl-params": True})
+        if a_param:
+            cl = a_param.get("data-cl-params", "")
+            m_like = re.search(r"like:(\d+)", cl)
+            if m_like:
+                likes = int(m_like.group(1))
+            m_rt = re.search(r"retweet:(\d+)", cl)
+            if m_rt:
+                rts = int(m_rt.group(1))
+
+        thread_posts.append({
+            "author": author,
+            "text": text,
+            "link": link,
+            "likes": likes,
+            "rts": rts,
+            "is_thread": True
+        })
+
+    return thread_posts
+
+def fetch_yahoo_topic_posts(keyword: str, max_count: int = 20, sort_by_likes: bool = True) -> List[Dict[str, Any]]:
     """
     指定キーワードでYahoo!リアルタイム検索を行い、関連するX（Twitter）の投稿テキスト、
-    いいね数、リツイート数を取得し、いいね数の多い順にソートして返します。
+    いいね数、リツイート数を取得します。
+    最上位のバズポストにスレッド（本人の続きツリー・返信）が存在する場合は自動で展開してストーリーを補完します。
     """
     encoded = urllib.parse.quote(keyword)
     url = f"https://search.yahoo.co.jp/realtime/search?p={encoded}"
@@ -73,6 +135,7 @@ def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15, sort_by_likes: bo
 
     tweet_containers = soup.find_all("div", class_=re.compile(r"Tweet_Tweet__"))
 
+    top_tweet_id = None
     for tc in tweet_containers:
         # 本文 (pタグ)
         p_elem = tc.find("p")
@@ -85,16 +148,19 @@ def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15, sort_by_likes: bo
         if not text or len(text) < 5:
             continue
 
-        # 投稿者名・アカウント
         author_elem = tc.find(class_=re.compile(r"Tweet_author|Tweet_info"))
         author = author_elem.get_text(separator=" ", strip=True) if author_elem else "匿名"
 
         # リンク（パーマリンク: /status/ を優先取得）
         link = ""
+        twid = ""
         for a_href in tc.find_all("a"):
             h = a_href.get("href", "")
             if "/status/" in h:
                 link = h.split("?")[0]
+                m_id = re.search(r"/status/(\d+)", link)
+                if m_id:
+                    twid = m_id.group(1)
                 break
         if not link:
             link_elem = tc.find("a", href=re.compile(r"twitter\.com|x\.com"))
@@ -113,17 +179,31 @@ def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15, sort_by_likes: bo
             if m_rt:
                 rts = int(m_rt.group(1))
 
+        if not top_tweet_id and twid:
+            top_tweet_id = twid
+
         posts.append({
             "author": author,
             "text": text,
             "link": link,
             "likes": likes,
-            "rts": rts
+            "rts": rts,
+            "twid": twid
         })
 
     # いいね数順に降順ソート
     if sort_by_likes:
         posts.sort(key=lambda x: (x["likes"], x["rts"]), reverse=True)
+
+    # 最上位のバズツイートに詳細（本人の続き・返信）があればスレッドを自動展開してマージ
+    if posts and posts[0].get("twid"):
+        target_twid = posts[0]["twid"]
+        thread_items = fetch_yahoo_tweet_detail(target_twid)
+        if len(thread_items) > 1:
+            # 既存のリストから重複を除外しつつ、スレッド（本人の続き＋返信）を上位に差し込む
+            existing_texts = {p["text"][:30] for p in thread_items}
+            other_posts = [p for p in posts if p["text"][:30] not in existing_texts]
+            posts = thread_items + other_posts
 
     return posts[:max_count]
 
