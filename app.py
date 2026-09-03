@@ -394,13 +394,13 @@ elif st.session_state.current_step == 3:
         edit_tags = st.text_input("タグ (カンマ区切り):", value=", ".join(tags_list))
 
         # 管理人のひとこと専用編集エリア
-        st.markdown("##### 💬 管理人のひとこと・感想（編集可能）")
-        st.caption("※ここに入力したテキストは、記事末尾の専用デザイン枠に自動反映されます。")
+        st.markdown("##### 💬 管理人のひとこと・感想（2行程度で編集可能）")
+        st.caption("※2行程度のサクッとしたオチ・感想がまとめブログに最適です。記事末尾の専用デザイン枠に自動反映されます。")
         current_admin_comment = art.get("admin_comment", "")
         edit_admin_comment = st.text_area(
             "管理人のひとこと本文:",
             value=current_admin_comment,
-            height=90,
+            height=70,
             help="フランクな感想やオチ、ツッコミなどを自由に編集できます。"
         )
         art["admin_comment"] = edit_admin_comment
