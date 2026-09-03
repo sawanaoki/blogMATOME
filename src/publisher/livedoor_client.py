@@ -37,7 +37,7 @@ class LivedoorPublisher:
                 "message": "ライブドアブログの ID または API Key が未設定です。設定画面または.envファイルを確認してください。"
             }
 
-        endpoint = f"https://livedoor.blogcms.jp/atom/blog/{self.livedoor_id}/article"
+        endpoint = f"https://livedoor.blogcms.jp/atompub/{self.livedoor_id}/article"
 
         # カテゴリXML生成
         categories = categories or ["まとめ"]
