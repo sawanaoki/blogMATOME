@@ -37,12 +37,31 @@ with st.sidebar.expander("🔑 Google Gemini API 設定", expanded=True):
         type="password",
         help="Google AI Studioで取得したAPIキーを入力してください。"
     )
-    gemini_model = st.selectbox(
+    model_choices = [
+        "gemini-3.8-flash",
+        "gemini-3.8-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "✏️ 直接モデル名を入力"
+    ]
+    # 設定ファイルの値があれば初期インデックスを決定
+    default_idx = 0
+    if Config.GEMINI_MODEL in model_choices:
+        default_idx = model_choices.index(Config.GEMINI_MODEL)
+    
+    selected_model_choice = st.selectbox(
         "モデル選択",
-        ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"],
-        index=0,
-        help="最新の高速・高精度モデル gemini-2.5-flash または 最高峰の推論モデル gemini-2.5-pro を推奨します。"
+        model_choices,
+        index=default_idx,
+        help="最新世代の gemini-3.8-flash / gemini-3.8-pro を選択できます。"
     )
+
+    if selected_model_choice == "✏️ 直接モデル名を入力":
+        gemini_model = st.text_input("モデル名を入力:", value=Config.GEMINI_MODEL)
+    else:
+        gemini_model = selected_model_choice
 
 with st.sidebar.expander("📝 ライブドアブログ設定", expanded=True):
     livedoor_id = st.text_input(

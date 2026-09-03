@@ -33,7 +33,7 @@
     - [x] 本文HTMLと管理人のひとこと枠のリアルタイム自動結合処理 <!-- id: 30 -->
     - [x] Cloudflare Tunnel / クラウドホスティングによる外部公開方法の調査・ドキュメント化 <!-- id: 31 -->
 - [x] 9. 最新Geminiモデル対応 & Streamlit Community Cloud (GitHub) 準備 <!-- id: 32 -->
-    - [x] 最新モデル `gemini-2.5-flash` / `gemini-2.5-pro` の正式サポート <!-- id: 33 -->
+    - [x] 最新モデル `gemini-3.8-flash` / `gemini-3.8-pro` および直接入力への対応 <!-- id: 33 -->
     - [x] Streamlit Secrets (`st.secrets`) とローカル環境変数のハイブリッド読み込み対応 <!-- id: 34 -->
     - [x] `.gitignore` の整備と Git 初期化 & main ブランチコミット <!-- id: 35 -->
     - [x] Streamlit Community Cloud デプロイ手順ガイドの作成 <!-- id: 36 -->

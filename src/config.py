@@ -23,7 +23,7 @@ def get_setting(key: str, default: str = "") -> str:
 class Config:
     # Gemini API
     GEMINI_API_KEY: str = get_setting("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = get_setting("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str = get_setting("GEMINI_MODEL", "gemini-3.8-flash")
 
     # ライブドアブログ
     LIVEDOOR_ID: str = get_setting("LIVEDOOR_ID", "")
