@@ -53,12 +53,17 @@ st.markdown("""
 st.sidebar.title("⚙️ 設定 & 連携")
 
 with st.sidebar.expander("🔑 Google Gemini API 設定", expanded=True):
+    # クエリパラメータまたはデフォルト値から復元（リロード対策）
+    default_gemini_key = st.query_params.get("gk", Config.GEMINI_API_KEY)
     gemini_key = st.text_input(
         "Gemini API Key",
-        value=Config.GEMINI_API_KEY,
+        value=default_gemini_key,
         type="password",
         help="Google AI Studioで取得したAPIキーを入力してください。"
     )
+    if gemini_key:
+        st.query_params["gk"] = gemini_key
+
     model_choices = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
@@ -67,9 +72,10 @@ with st.sidebar.expander("🔑 Google Gemini API 設定", expanded=True):
         "gemini-3.8-pro",
         "✏️ 直接モデル名を入力"
     ]
+    saved_model = st.query_params.get("gm", Config.GEMINI_MODEL)
     default_idx = 0
-    if Config.GEMINI_MODEL in model_choices:
-        default_idx = model_choices.index(Config.GEMINI_MODEL)
+    if saved_model in model_choices:
+        default_idx = model_choices.index(saved_model)
     
     selected_model_choice = st.selectbox(
         "モデル選択",
@@ -79,22 +85,33 @@ with st.sidebar.expander("🔑 Google Gemini API 設定", expanded=True):
     )
 
     if selected_model_choice == "✏️ 直接モデル名を入力":
-        gemini_model = st.text_input("モデル名を入力:", value=Config.GEMINI_MODEL)
+        gemini_model = st.text_input("モデル名を入力:", value=saved_model)
     else:
         gemini_model = selected_model_choice
+    
+    if gemini_model:
+        st.query_params["gm"] = gemini_model
 
 with st.sidebar.expander("📝 ライブドアブログ設定", expanded=True):
+    default_livedoor_id = st.query_params.get("lid", Config.LIVEDOOR_ID)
     livedoor_id = st.text_input(
         "livedoor ID",
-        value=Config.LIVEDOOR_ID,
+        value=default_livedoor_id,
         help="ライブドアブログのID（ログインIDまたはブログID）"
     )
+    if livedoor_id:
+        st.query_params["lid"] = livedoor_id
+
+    default_livedoor_key = st.query_params.get("lkey", Config.LIVEDOOR_API_KEY)
     livedoor_api_key = st.text_input(
         "API Key",
-        value=Config.LIVEDOOR_API_KEY,
+        value=default_livedoor_key,
         type="password",
         help="ブログ管理画面 > ブログ設定 > API Key で確認できます"
     )
+    if livedoor_api_key:
+        st.query_params["lkey"] = livedoor_api_key
+
     post_as_draft = st.checkbox(
         "下書きとして保存する",
         value=Config.LIVEDOOR_POST_DRAFT,
