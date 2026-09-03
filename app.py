@@ -291,11 +291,29 @@ elif st.session_state.current_step == 2:
     with st.expander(f"📋 収集されたXポスト一覧 ({len(st.session_state.collected_posts)}件・いいね数順)", expanded=True):
         active_posts = []
         if st.session_state.collected_posts:
-            st.caption("※いいね数・RT数が多い順にソートされています。不要なポストはチェックを外して除外できます。")
+            # 一括操作ボタン
+            c_btn_none, c_btn_all = st.columns(2)
+            with c_btn_none:
+                if st.button("❌ 採用チェックをすべて外す", key="btn_uncheck_all", use_container_width=True):
+                    for i in range(len(st.session_state.collected_posts)):
+                        st.session_state[f"post_chk_{i}"] = False
+                    st.rerun()
+            with c_btn_all:
+                if st.button("✅ すべて選択する", key="btn_check_all", use_container_width=True):
+                    for i in range(len(st.session_state.collected_posts)):
+                        st.session_state[f"post_chk_{i}"] = True
+                    st.rerun()
+
+            st.caption("※不要なポストのチェックを外すか、「すべて外す」を押してから使いたいポストだけチェックを入れてください。")
             for idx, p in enumerate(st.session_state.collected_posts):
                 c_chk, c_txt = st.columns([1, 10])
+                chk_key = f"post_chk_{idx}"
+                # セッションステートに初期値がなければTrue
+                if chk_key not in st.session_state:
+                    st.session_state[chk_key] = True
+
                 with c_chk:
-                    use_post = st.checkbox("採用", value=True, key=f"post_chk_{idx}")
+                    use_post = st.checkbox("採用", key=chk_key)
                 with c_txt:
                     likes = p.get("likes", 0)
                     rts = p.get("rts", 0)
