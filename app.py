@@ -288,15 +288,20 @@ elif st.session_state.current_step == 2:
         ]
     )
 
-    with st.expander(f"📋 収集されたXポスト一覧 ({len(st.session_state.collected_posts)}件)", expanded=False):
+    with st.expander(f"📋 収集されたXポスト一覧 ({len(st.session_state.collected_posts)}件・いいね数順)", expanded=True):
         active_posts = []
         if st.session_state.collected_posts:
+            st.caption("※いいね数・RT数が多い順にソートされています。不要なポストはチェックを外して除外できます。")
             for idx, p in enumerate(st.session_state.collected_posts):
                 c_chk, c_txt = st.columns([1, 10])
                 with c_chk:
                     use_post = st.checkbox("採用", value=True, key=f"post_chk_{idx}")
                 with c_txt:
-                    st.markdown(f"**{p['author']}**: {p['text']}")
+                    likes = p.get("likes", 0)
+                    rts = p.get("rts", 0)
+                    metrics_badge = f"　<span style='background:#ffe3e3;color:#c92a2a;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:bold;'>❤️ {likes:,} いいね</span> <span style='background:#e7f5ff;color:#1864ab;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:bold;'>🔁 {rts:,} RT</span>" if (likes or rts) else ""
+                    st.markdown(f"**{p['author']}**{metrics_badge}", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:#f8f9fa;padding:8px 12px;border-radius:6px;margin:4px 0 10px;font-size:0.95em;'>{p['text']}</div>", unsafe_allow_html=True)
                 if use_post:
                     active_posts.append(p)
         else:

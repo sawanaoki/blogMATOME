@@ -57,7 +57,10 @@ class GeminiGenerator:
         for idx, p in enumerate(posts, 1):
             author = p.get("author", "匿名")
             text = p.get("text", "")
-            posts_text_list.append(f"[{idx}] {author}: {text}")
+            likes = p.get("likes", 0)
+            rts = p.get("rts", 0)
+            metric_str = f" [❤️ {likes:,}いいね / 🔁 {rts:,}RT]" if (likes or rts) else ""
+            posts_text_list.append(f"[{idx}] {author}{metric_str}: {text}")
         posts_text = "\n".join(posts_text_list) if posts_text_list else "特になし（トピック情報をもとに構成してください）"
 
         user_content = SUMMARY_BLOG_USER_PROMPT_TEMPLATE.format(

@@ -54,9 +54,10 @@ def fetch_yahoo_trends(max_count: int = 25) -> List[Dict[str, Any]]:
 
     return raw_trends
 
-def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15) -> List[Dict[str, str]]:
+def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15, sort_by_likes: bool = True) -> List[Dict[str, Any]]:
     """
-    指定キーワードでYahoo!リアルタイム検索を行い、関連するX（Twitter）の投稿テキストと投稿者情報を取得します。
+    指定キーワードでYahoo!リアルタイム検索を行い、関連するX（Twitter）の投稿テキスト、
+    いいね数、リツイート数を取得し、いいね数の多い順にソートして返します。
     """
     encoded = urllib.parse.quote(keyword)
     url = f"https://search.yahoo.co.jp/realtime/search?p={encoded}"
@@ -68,7 +69,7 @@ def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15) -> List[Dict[str,
         return []
 
     soup = BeautifulSoup(response.text, "html.parser")
-    posts: List[Dict[str, str]] = []
+    posts: List[Dict[str, Any]] = []
 
     tweet_containers = soup.find_all("div", class_=re.compile(r"Tweet_Tweet__"))
 
@@ -92,16 +93,32 @@ def fetch_yahoo_topic_posts(keyword: str, max_count: int = 15) -> List[Dict[str,
         link_elem = tc.find("a", href=re.compile(r"twitter\.com|x\.com"))
         link = link_elem.get("href", "") if link_elem else ""
 
+        # いいね数 (likes) & リツイート数 (rts) を data-cl-params から抽出
+        likes = 0
+        rts = 0
+        a_param = tc.find("a", attrs={"data-cl-params": True})
+        if a_param:
+            cl_params = a_param.get("data-cl-params", "")
+            m_like = re.search(r"like:(\d+)", cl_params)
+            if m_like:
+                likes = int(m_like.group(1))
+            m_rt = re.search(r"retweet:(\d+)", cl_params)
+            if m_rt:
+                rts = int(m_rt.group(1))
+
         posts.append({
             "author": author,
             "text": text,
-            "link": link
+            "link": link,
+            "likes": likes,
+            "rts": rts
         })
 
-        if len(posts) >= max_count:
-            break
+    # いいね数順に降順ソート
+    if sort_by_likes:
+        posts.sort(key=lambda x: (x["likes"], x["rts"]), reverse=True)
 
-    return posts
+    return posts[:max_count]
 
 if __name__ == "__main__":
     trends = fetch_yahoo_trends(5)
