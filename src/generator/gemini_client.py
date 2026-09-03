@@ -70,39 +70,60 @@ class GeminiGenerator:
             tone=tone
         )
 
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=user_content,
-                config=types.GenerateContentConfig(
-                    system_instruction=SUMMARY_BLOG_SYSTEM_PROMPT,
-                    temperature=0.7,
-                    response_mime_type="application/json"
+        # 試行するモデル候補リスト（指定モデルが混雑している場合は安定モデルへ自動フォールバック）
+        models_to_try = [self.model_name]
+        for fallback in ["gemini-2.5-flash", "gemini-1.5-flash"]:
+            if fallback not in models_to_try:
+                models_to_try.append(fallback)
+
+        last_exception = None
+        for attempt_model in models_to_try:
+            try:
+                response = self.client.models.generate_content(
+                    model=attempt_model,
+                    contents=user_content,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SUMMARY_BLOG_SYSTEM_PROMPT,
+                        temperature=0.7,
+                        response_mime_type="application/json"
+                    )
                 )
-            )
 
-            response_text = response.text.strip()
-            cleaned_text = response_text
-            if cleaned_text.startswith("```"):
-                cleaned_text = re.sub(r"^```(?:json)?\s*", "", cleaned_text)
-                cleaned_text = re.sub(r"\s*```$", "", cleaned_text)
+                response_text = response.text.strip()
+                cleaned_text = response_text
+                if cleaned_text.startswith("```"):
+                    cleaned_text = re.sub(r"^```(?:json)?\s*", "", cleaned_text)
+                    cleaned_text = re.sub(r"\s*```$", "", cleaned_text)
 
-            article_data = json.loads(cleaned_text)
+                article_data = json.loads(cleaned_text)
 
-            # 後方互換性と管理人の一言分離処理
-            admin_comment = article_data.get("admin_comment", "")
-            body_html = article_data.get("body_html", "")
-            if not body_html and "content_html" in article_data:
-                body_html = article_data["content_html"]
+                # 後方互換性と管理人の一言分離処理
+                admin_comment = article_data.get("admin_comment", "")
+                body_html = article_data.get("body_html", "")
+                if not body_html and "content_html" in article_data:
+                    body_html = article_data["content_html"]
 
-            article_data["body_html"] = body_html
-            article_data["admin_comment"] = admin_comment
-            article_data["content_html"] = body_html + format_admin_comment_html(admin_comment)
+                article_data["body_html"] = body_html
+                article_data["admin_comment"] = admin_comment
+                article_data["content_html"] = body_html + format_admin_comment_html(admin_comment)
+                article_data["used_model"] = attempt_model
 
-            return article_data
+                return article_data
 
-        except Exception as e:
-            raise RuntimeError(f"Gemini APIによる記事生成中にエラーが発生しました: {e}")
+            except Exception as e:
+                err_msg = str(e)
+                last_exception = e
+                # 503 (一時的高負荷) または 404 (未対応モデル名) の場合はフォールバックモデルで再試行
+                if any(k in err_msg for k in ["503", "UNAVAILABLE", "high demand", "404", "NOT_FOUND"]):
+                    print(f"[{attempt_model}] がビジーまたは利用不可のためフォールバックします: {e}")
+                    continue
+                else:
+                    # その他の致命的エラー（キー不正など）は即座に例外発生
+                    raise RuntimeError(f"Gemini APIによる記事生成中にエラーが発生しました: {e}")
+
+        raise RuntimeError(
+            f"すべてのGeminiモデルが一時的に混雑しています。1〜2分置いてから再度お試しください。詳細: {last_exception}"
+        )
 
 if __name__ == "__main__":
     generator = GeminiGenerator()

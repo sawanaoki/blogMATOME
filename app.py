@@ -60,12 +60,11 @@ with st.sidebar.expander("🔑 Google Gemini API 設定", expanded=True):
         help="Google AI Studioで取得したAPIキーを入力してください。"
     )
     model_choices = [
-        "gemini-3.8-flash",
-        "gemini-3.8-pro",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
+        "gemini-3.8-flash",
+        "gemini-3.8-pro",
         "gemini-1.5-flash",
-        "gemini-1.5-pro",
         "✏️ 直接モデル名を入力"
     ]
     default_idx = 0
@@ -76,7 +75,7 @@ with st.sidebar.expander("🔑 Google Gemini API 設定", expanded=True):
         "モデル選択",
         model_choices,
         index=default_idx,
-        help="最新世代の gemini-3.8-flash / gemini-3.8-pro を選択できます。"
+        help="最も安定・高速な gemini-2.5-flash を推奨します。混雑（503エラー）が発生した場合は自動的に安定モデルへフォールバックします。"
     )
 
     if selected_model_choice == "✏️ 直接モデル名を入力":
