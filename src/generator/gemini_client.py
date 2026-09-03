@@ -70,9 +70,14 @@ class GeminiGenerator:
             tone=tone
         )
 
-        # 試行するモデル候補リスト（指定モデルが混雑している場合は安定モデルへ自動フォールバック）
-        models_to_try = [self.model_name]
-        for fallback in ["gemini-2.5-flash", "gemini-1.5-flash"]:
+        import time
+
+        # 試行するモデル候補リスト（指定モデルが混雑または非対応の場合は安定モデルへ自動フォールバック）
+        models_to_try = []
+        if self.model_name:
+            models_to_try.append(self.model_name)
+
+        for fallback in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"]:
             if fallback not in models_to_try:
                 models_to_try.append(fallback)
 
